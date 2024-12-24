@@ -129,13 +129,19 @@ export function activate(context: vscode.ExtensionContext) {
         ),
         vscode.commands.registerCommand(
             "symbolizer-for-vex-v5.jump-to-address",
-            async () => {
-                let address = await vscode.window.showInputBox({
-                    title: "Jump to Address",
-                    prompt: "Enter a hexadecimal address number to reveal its location in your source code.",
-                    // This is just some random number that kind of looks like it'd work.
-                    placeHolder: "03801a24",
-                });
+            async (addressParam: unknown) => {
+                let address: string | undefined;
+
+                if (typeof addressParam === "string") {
+                    address = addressParam;
+                } else {
+                    address = await vscode.window.showInputBox({
+                        title: "Jump to Address",
+                        prompt: "Enter a hexadecimal address number to reveal its location in your source code.",
+                        // This is just some random number that kind of looks like it'd work.
+                        placeHolder: "03801a24",
+                    });
+                }
 
                 if (!address) {
                     return;

@@ -247,19 +247,39 @@ export class Symbolizer {
                     }
                 });
         } catch (err) {
+            const RUN_AUTOFIX = "Enable VEXCode debug info";
+            const DOWNLOAD_LLVM = "Download LLVM";
+            const SHOW_PROS_EXTENSION =
+                "Install PROS VS Code extension (recommended)";
+            const INSTALL_PROS_TOOLCHAIN =
+                "Install PROS Toolchain (recommended)";
+
             output.appendLine(`Failed to jump to line: ${format(err)}`);
             const msg = err instanceof Error ? err.message : String(err);
 
-            const canAutoFixVEXCodeDebugInfo =
-                msg.includes("This address could not be resolved to a line") &&
-                folder &&
-                this.canAutoFixVEXCodeDebugInfo(folder.uri);
-
             const actions: string[] = [];
 
-            const RUN_AUTOFIX = "Enable VEXCode debug info";
-            if (canAutoFixVEXCodeDebugInfo) {
+            if (
+                msg.includes("This address could not be resolved to a line") &&
+                folder &&
+                (await this.canAutoFixVEXCodeDebugInfo(folder.uri))
+            ) {
                 actions.push(RUN_AUTOFIX);
+            }
+
+            if (msg.includes("Cannot find any working code object readers")) {
+                if (vscode.extensions.getExtension("sigbots.pros")) {
+                    actions.push(INSTALL_PROS_TOOLCHAIN);
+                } else {
+                    actions.push(SHOW_PROS_EXTENSION);
+                }
+                actions.push(DOWNLOAD_LLVM);
+            }
+
+            if (actions.length) {
+                output.appendLine(
+                    `Offering the following solutions: ${actions.join(", ")}`,
+                );
             }
 
             vscode.window
@@ -271,6 +291,32 @@ export class Symbolizer {
                         } catch (err) {
                             vscode.window.showErrorMessage(
                                 `Couldn't enable debug info: ${err}`,
+                            );
+                        }
+                    } else if (action === DOWNLOAD_LLVM) {
+                        vscode.env.openExternal(
+                            vscode.Uri.parse(
+                                "https://github.com/llvm/llvm-project/releases/latest",
+                            ),
+                        );
+                    } else if (action === SHOW_PROS_EXTENSION) {
+                        vscode.commands.executeCommand(
+                            "workbench.extensions.search",
+                            "sigbots.pros",
+                        );
+                    } else if (action === INSTALL_PROS_TOOLCHAIN) {
+                        const pros =
+                            vscode.extensions.getExtension("sigbots.pros");
+                        if (pros) {
+                            await pros.activate();
+                            await vscode.commands.executeCommand(
+                                "pros.install",
+                            );
+                            await this.jumpToAddress(address);
+                        } else {
+                            vscode.commands.executeCommand(
+                                "workbench.extensions.search",
+                                "sigbots.pros",
                             );
                         }
                     }
