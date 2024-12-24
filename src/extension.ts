@@ -18,7 +18,7 @@ import {
 import { format } from "node:util";
 import { platform } from "node:process";
 
-const ADDRESS_PATTERN = /(?<=^\s*)0x[0-9a-fA-F]+$/g;
+const ADDRESS_PATTERN = /(?<=^\s*\d*:?\s*)0x[0-9a-fA-F]+$/g;
 
 /**
  * A terminal link with an extra `address` field.
