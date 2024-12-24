@@ -1,9 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { ResolvedSymbol, Symbolizer } from "./symbolization.js";
+import { Symbolizer } from "./symbolization.js";
 import { output } from "./logs.js";
-import * as path from "node:path";
 import {
     SimpleFilesystemConvention,
     VexideFilesystemConvention,
@@ -15,7 +14,6 @@ import {
     LLVMCodeObjectReader,
     PROSToolchainCodeObjectReader,
 } from "./readers.js";
-import { format } from "node:util";
 import { platform } from "node:process";
 
 const ADDRESS_PATTERN = /(?<=^\s*\d*:?\s*)0x[0-9a-fA-F]+$/g;

@@ -1,22 +1,42 @@
-# symbolizer-for-vex-v5 README
+# Symbolizer for VEX V5
 
-This is the README for your extension "symbolizer-for-vex-v5". After writing up a brief description, we recommend including the following sections.
+A Visual Studio Code extension for VEX V5 robot programmers which reveals the location of a crash, given its address.
+
+It requires little-to-no setup and supports PROS, VEXCode, and vexide.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### Find where your code is crashing
 
-For example if there is an image subfolder under your extension project workspace:
+![A VEXCode program displaying a memory permission error](./images/crash.png)
 
-\!\[feature X\]\(images/feature-x.png\)
+VEX V5 frameworks such as PROS, VEXCode, and vexide don't give line numbers or file names after a crash; instead, they give an address number. Symbolizer for VEX V5 can turn this number into something more useful by jumping directly to the location of the crash in your source code.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+![The "Jump to Address" command, which reveals the crash location in the editor](./images/jump-to-address.gif)
+
+### Step through lengthy stack traces
+
+Symbolizer for VEX V5 makes each line of a stack trace clickable so you can easily step through each function that was running during a crash or panic.
+
+![Stepping through a PROS program's DATA ABORT EXCEPTION to view each stack frame during the crash](./images/stack-trace.gif)
+
+### View framework source code
+
+If the address you click is in PROS's source code, Symbolizer for VEX V5 will provide you with a link to the relevant line in PROS's GitHub repository.
+
+![A notification offering to open PROS's GitHub](./images/open-github.png)
+
+For vexide users, Symbolizer for VEX V5 will simply open the relevant file in VS Code.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+This extension requires a symbolizer tool in order to function. Installing LLVM or addr2line does the trick, although LLVM may give marginally better results.
 
-## Extension Settings
+The PROS Toolchain includes addr2line, so PROS users do not need to take any further steps.
+
+VEXCode and vexide users will be prompted to install the PROS VS Code extension or to install LLVM.
+
+<!-- ## Extension Settings
 
 Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
 
@@ -25,47 +45,8 @@ For example:
 This extension contributes the following settings:
 
 * `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+* `myExtension.thing`: Set to `blah` to do something. -->
 
-## Known Issues
+<!-- ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Calling out known issues can help limit users opening duplicate issues against your extension. -->
