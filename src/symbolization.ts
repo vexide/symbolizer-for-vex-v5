@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { output } from "./logs.js";
 import { format } from "node:util";
+import * as path from "node:path";
 
 /**
  * Locates code objects which contain useful metadata such that they can be used in symbolization.
@@ -18,24 +19,57 @@ export interface CodeObjectLocator {
     findObjectUris(folder: vscode.Uri): Promise<vscode.Uri[]>;
 }
 
-export interface ResolvedLine {
+/**
+ * Metadata about an address such as its file and line number.
+ */
+export interface ResolvedSymbol {
+    /**
+     * The URI of the file in which the symbol is located.
+     */
     uri: vscode.Uri;
+    /**
+     * The line number and column of the symbol.
+     */
     position: vscode.Position;
+    /**
+     * The URI of the code object from which this metadata was read.
+     */
     codeObject: vscode.Uri;
+    /**
+     * The human-readable name of this symbol.
+     */
     symbolName: string;
 }
 
+/**
+ * Reads metadata from a code object such as an ELF file.
+ */
 export interface CodeObjectReader {
+    /**
+     * The name of the reader.
+     */
     readonly name: string;
 
+    /**
+     * Checks if the reader could be used to symbolize a code object.
+     * @returns `true` if it is working, `false` if it isn't
+     */
     isWorking(): Promise<boolean>;
 
-    resolveToLineInObject(
+    /**
+     * Retrieves metadata from a code object to turn an address into a {@link ResolvedSymbol}.
+     * @param address the address to symbolize
+     * @param codeObject the code object to retrieve metadata from
+     */
+    resolveToSymbolInObject(
         address: string,
         codeObject: vscode.Uri,
-    ): Promise<ResolvedLine>;
+    ): Promise<ResolvedSymbol>;
 }
 
+/**
+ * Handles requests to symbolize address by searching for code objects and reading their metadata.
+ */
 export class Symbolizer {
     constructor(
         public locators: CodeObjectLocator[],
@@ -43,6 +77,10 @@ export class Symbolizer {
     ) {}
 
     #firstWorkingReader: CodeObjectReader | undefined = undefined;
+    /**
+     * Gets and caches the first code object reader which is working properly from the list of {@link readers}.
+     * @returns the code object reader, or undefined if none are working
+     */
     async getWorkingReader(): Promise<CodeObjectReader | undefined> {
         if (!this.#firstWorkingReader) {
             output.appendLine("Trying to find a working code object reader.");
@@ -72,6 +110,10 @@ export class Symbolizer {
         return this.#firstWorkingReader;
     }
 
+    /**
+     * Gets the folder that the user is working in.
+     * @returns the folder, or undefined if there is no active folder
+     */
     getActiveFolder(): vscode.WorkspaceFolder | undefined {
         const activeUri = vscode.window.activeTextEditor?.document.uri;
         if (activeUri) {
@@ -84,12 +126,16 @@ export class Symbolizer {
         return vscode.workspace.workspaceFolders?.[0];
     }
 
-    async resolveToLine(address: string) {
-        const folder = this.getActiveFolder();
-        if (!folder) {
-            throw new Error("There is no active workspace");
-        }
-
+    /**
+     * Resolves metadata about an address.
+     * @param address the address to resolve
+     * @param folder the folder to search for metadata in
+     * @returns the metadata
+     */
+    async resolveToSymbol(
+        address: string,
+        folder: vscode.WorkspaceFolder,
+    ): Promise<ResolvedSymbol> {
         const readerRequest = this.getWorkingReader();
 
         let locatedCodeObjects: vscode.Uri[] = [];
@@ -128,10 +174,10 @@ export class Symbolizer {
         }
 
         const errors = [];
-        let resolved: ResolvedLine | undefined;
+        let resolved: ResolvedSymbol | undefined;
         for (const codeObject of locatedCodeObjects) {
             try {
-                resolved = await reader.resolveToLineInObject(
+                resolved = await reader.resolveToSymbolInObject(
                     address,
                     codeObject,
                 );
@@ -148,5 +194,229 @@ export class Symbolizer {
             );
         }
         return resolved;
+    }
+
+    /**
+     * Jumps to the file & line number on which the specified address is located.
+     * @param address the address to jump to
+     */
+    async jumpToAddress(address: string): Promise<void> {
+        output.appendLine(
+            `Attempting to symbolize and jump to the address ${address}.`,
+        );
+        const folder = this.getActiveFolder();
+
+        try {
+            if (!folder) {
+                throw new Error("There is no active workspace");
+            }
+            const resolved = await this.resolveToSymbol(address, folder);
+
+            output.appendLine(`Resolved to: ${format(resolved)}`);
+
+            const remoteRepos = this.#getRemoteRepos(resolved);
+            let showFullPath = false;
+
+            try {
+                await this.#jumpToLine(resolved);
+            } catch {
+                // No need to clog up the info message with debug data if the user can just hit the button to open in their browser
+                if (remoteRepos.size === 0) {
+                    showFullPath = true;
+                }
+            }
+
+            const sourceCodePath = showFullPath
+                ? resolved.uri.path
+                : path.basename(resolved.uri.path);
+            const codeObjectFileName = path.basename(resolved.codeObject.path);
+
+            vscode.window
+                .showInformationMessage(
+                    `${resolved.symbolName} in ${sourceCodePath} (${codeObjectFileName})`,
+                    ...remoteRepos.keys(),
+                )
+                .then((action) => {
+                    if (!action) {
+                        return;
+                    }
+
+                    const uri = remoteRepos.get(action);
+                    if (uri) {
+                        vscode.env.openExternal(uri);
+                    }
+                });
+        } catch (err) {
+            output.appendLine(`Failed to jump to line: ${format(err)}`);
+            const msg = err instanceof Error ? err.message : String(err);
+
+            const canAutoFixVEXCodeDebugInfo =
+                msg.includes("This address could not be resolved to a line") &&
+                folder &&
+                this.canAutoFixVEXCodeDebugInfo(folder.uri);
+
+            const actions: string[] = [];
+
+            const RUN_AUTOFIX = "Enable VEXCode debug info";
+            if (canAutoFixVEXCodeDebugInfo) {
+                actions.push(RUN_AUTOFIX);
+            }
+
+            vscode.window
+                .showErrorMessage(`Couldn't jump to line: ${msg}`, ...actions)
+                .then(async (action) => {
+                    if (action === RUN_AUTOFIX) {
+                        try {
+                            await this.autoFixVEXCodeDebugInfo(folder!.uri);
+                        } catch (err) {
+                            vscode.window.showErrorMessage(
+                                `Couldn't enable debug info: ${err}`,
+                            );
+                        }
+                    }
+                });
+        }
+    }
+
+    /**
+     * Generates a map of names and their corresponding URIs for symbols which can only be viewed
+     * online.
+     * @param resolved the symbol to generate the map for
+     * @returns the map
+     */
+    #getRemoteRepos(resolved: ResolvedSymbol): Map<string, vscode.Uri> {
+        const repos = new Map();
+
+        const prosBase = "/home/vsts/work/1/s/";
+        if (resolved.uri.path.startsWith(prosBase)) {
+            const relative = resolved.uri.path.replace(prosBase, "");
+            const full = path.resolve(
+                "purduesigbots/pros/blob/develop-pros-4/",
+                relative,
+            );
+
+            repos.set(
+                "Open purduesigbots/pros",
+                vscode.Uri.from({
+                    scheme: "https",
+                    authority: "www.github.com",
+                    path: full,
+                    fragment: `L${resolved.position.line + 1}`,
+                }),
+            );
+        }
+
+        return repos;
+    }
+
+    /**
+     * Jumps to the line on which the specified symbol resides.
+     * @param resolved the symbol to jump to
+     */
+    async #jumpToLine(resolved: ResolvedSymbol) {
+        const document = await vscode.workspace.openTextDocument(resolved.uri);
+        await vscode.window.showTextDocument(document, {
+            selection: new vscode.Range(resolved.position, resolved.position),
+        });
+    }
+
+    async #readVEXCodeMakefile(projectDir: vscode.Uri) {
+        const makefileBytes = await vscode.workspace.fs.readFile(
+            vscode.Uri.joinPath(projectDir, "makefile"),
+        );
+        return new TextDecoder().decode(makefileBytes);
+    }
+
+    readonly #vexCodeAutoFixDebugInfoInsertionPoint = "include vex/mkenv.mk";
+
+    /**
+     * Checks if debug info can be automatically enabled in the specified VEXCode project.
+     * @param projectDir the VEXCode project to check
+     * @param makefileContents the contents of the project's makefile, if it has already been read
+     * @returns `true` if a fix is available, `false` otherwise
+     */
+    async canAutoFixVEXCodeDebugInfo(
+        projectDir: vscode.Uri,
+        makefileContents?: string,
+    ) {
+        try {
+            const makefile =
+                makefileContents ??
+                (await this.#readVEXCodeMakefile(projectDir));
+
+            // Needs to be a VEXCode makefile to apply auto-fix
+            if (!makefile.startsWith("# VEXcode makefile")) {
+                return false;
+            }
+
+            if (
+                !makefile.includes(this.#vexCodeAutoFixDebugInfoInsertionPoint)
+            ) {
+                return false;
+            }
+
+            // If the fix has already been applied, then there's no reason to do it again.
+            if (makefile.includes(" -g")) {
+                return false;
+            }
+
+            output.appendLine("Offering to fix Makefile.");
+
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Automatically enables debug info in a VEXCode project so that symbols can be resolved.
+     * @param projectDir the VEXCode project to fix
+     */
+    async autoFixVEXCodeDebugInfo(projectDir: vscode.Uri) {
+        output.appendLine("Attempting to fix Makefile!");
+
+        let makefile = await this.#readVEXCodeMakefile(projectDir);
+
+        if (!(await this.canAutoFixVEXCodeDebugInfo(projectDir, makefile))) {
+            output.appendLine(
+                "Aborting — the Makefile is no longer in a fixable state. (Perhaps the fix was already run)",
+            );
+            return;
+        }
+
+        output.appendLine(`Makefile contents:\n\n${makefile}\n\n`);
+
+        makefile = makefile.replace(
+            this.#vexCodeAutoFixDebugInfoInsertionPoint,
+            `${
+                this.#vexCodeAutoFixDebugInfoInsertionPoint
+            }\n\n# enable debug metadata\nCFLAGS += -g\nCXX_FLAGS += -g`,
+        );
+
+        output.appendLine(`NEW Makefile contents:\n\n${makefile}\n\n`);
+
+        const bytes = new TextEncoder().encode(makefile);
+
+        await vscode.workspace.fs.writeFile(
+            vscode.Uri.joinPath(projectDir, "makefile"),
+            bytes,
+        );
+
+        let didClean = false;
+
+        try {
+            await vscode.commands.executeCommand(
+                "vexrobotics.vexcode.project.clean",
+            );
+            didClean = true;
+        } catch {}
+
+        vscode.window.showInformationMessage(
+            `Enabled debug info! ${
+                didClean
+                    ? "Reupload your project"
+                    : "Clean the project and reupload it"
+            } to finish.`,
+        );
     }
 }

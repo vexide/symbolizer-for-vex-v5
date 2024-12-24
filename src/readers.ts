@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { CodeObjectReader, ResolvedLine } from "./symbolization.js";
+import { CodeObjectReader, ResolvedSymbol } from "./symbolization.js";
 import { promisify } from "node:util";
 import { execFile as execFileCb } from "node:child_process";
 import { EOL } from "node:os";
@@ -7,9 +7,15 @@ import { output } from "./logs.js";
 
 const execFile = promisify(execFileCb);
 
+/**
+ * Reads code objects using an addr2line-style symbolizer.
+ */
 export class GNUBinutilsCodeObjectReader implements CodeObjectReader {
     constructor(
         public readonly name = "GNU Binutils",
+        /**
+         * The name or path of the executable to spawn.
+         */
         public readonly executable = "addr2line",
     ) {}
 
@@ -25,10 +31,10 @@ export class GNUBinutilsCodeObjectReader implements CodeObjectReader {
         }
     }
 
-    async resolveToLineInObject(
+    async resolveToSymbolInObject(
         address: string,
         codeObject: vscode.Uri,
-    ): Promise<ResolvedLine> {
+    ): Promise<ResolvedSymbol> {
         const args = ["-f", "-C", "-e", codeObject.fsPath, "--", address];
         output.appendLine(
             `Using ${this.name} install to resolve symbol: ${
@@ -104,10 +110,10 @@ export class LLVMCodeObjectReader implements CodeObjectReader {
         }
     }
 
-    async resolveToLineInObject(
+    async resolveToSymbolInObject(
         address: string,
         codeObject: vscode.Uri,
-    ): Promise<ResolvedLine> {
+    ): Promise<ResolvedSymbol> {
         const args = ["--output-style=JSON", "-e", codeObject.fsPath, address];
         output.appendLine(
             `Using ${this.name} install to resolve symbol: ${

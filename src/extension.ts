@@ -1,10 +1,15 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { ResolvedLine as ResolvedSymbol, Symbolizer } from "./symbolization.js";
+import { ResolvedSymbol, Symbolizer } from "./symbolization.js";
 import { output } from "./logs.js";
 import * as path from "node:path";
-import { PROSCodeObjectLocator } from "./locators/pros.js";
+import {
+    SimpleFilesystemConvention,
+    VexideFilesystemConvention,
+    RecentCodeObjectLocator,
+    VEXCodeFilesystemConvention,
+} from "./locators.js";
 import {
     GNUBinutilsCodeObjectReader,
     LLVMCodeObjectReader,
@@ -12,6 +17,8 @@ import {
 } from "./readers.js";
 import { format } from "node:util";
 import { platform } from "node:process";
+
+const ADDRESS_PATTERN = /(?<=^\s*)0x[0-9a-fA-F]+$/g;
 
 /**
  * A terminal link with an extra `address` field.
@@ -49,7 +56,7 @@ class AddressLinkProvider implements vscode.TerminalLinkProvider {
         token: vscode.CancellationToken,
     ): vscode.ProviderResult<AddressLink[]> {
         // find 0x... addresses in the terminal so we can jump to them
-        const matches = context.line.matchAll(/(?<=^\s+)0x[0-9a-fA-F]+$/g);
+        const matches = context.line.matchAll(ADDRESS_PATTERN);
 
         const links = Array.from(matches)
             .filter(AddressLinkProvider.#isAddressInUserSpace)
@@ -65,92 +72,7 @@ class AddressLinkProvider implements vscode.TerminalLinkProvider {
     }
 
     async handleTerminalLink(link: AddressLink): Promise<void> {
-        output.appendLine(
-            `Attempting to symbolize and jump to the address ${link.address}.`,
-        );
-        try {
-            const resolved = await this.symbolizer.resolveToLine(link.address);
-            output.appendLine(`Resolved to: ${format(resolved)}`);
-
-            const remoteRepos = this.#getRemoteRepos(resolved);
-            let showFullPath = false;
-
-            try {
-                await this.#jumpToLine(resolved);
-            } catch {
-                // No need to clog up the info message with debug data if the user can just hit the button to open in their browser
-                if (remoteRepos.size === 0) {
-                    showFullPath = true;
-                }
-            }
-
-            const sourceCodePath = showFullPath
-                ? resolved.uri.path
-                : path.basename(resolved.uri.path);
-            const codeObjectFileName = path.basename(resolved.codeObject.path);
-
-            vscode.window
-                .showInformationMessage(
-                    `${resolved.symbolName} in ${sourceCodePath} (${codeObjectFileName})`,
-                    ...remoteRepos.keys(),
-                )
-                .then((action) => {
-                    if (!action) {
-                        return;
-                    }
-
-                    const uri = remoteRepos.get(action);
-                    if (uri) {
-                        vscode.env.openExternal(uri);
-                    }
-                });
-        } catch (err) {
-            output.appendLine(`Failed to jump to line: ${err}`);
-            const msg = err instanceof Error ? err.message : String(err);
-            vscode.window.showErrorMessage(`Couldn't jump to line: ${msg}`);
-        }
-    }
-
-    /**
-     * Generates a map of names and their corresponding URIs for symbols which can only be viewed
-     * online.
-     * @param resolved the symbol to generate the map for
-     * @returns the map
-     */
-    #getRemoteRepos(resolved: ResolvedSymbol): Map<string, vscode.Uri> {
-        const repos = new Map();
-
-        const prosBase = "/home/vsts/work/1/s/";
-        if (resolved.uri.path.startsWith(prosBase)) {
-            const relative = resolved.uri.path.replace(prosBase, "");
-            const full = path.resolve(
-                "purduesigbots/pros/blob/develop-pros-4/",
-                relative,
-            );
-
-            repos.set(
-                "Open purduesigbots/pros",
-                vscode.Uri.from({
-                    scheme: "https",
-                    authority: "www.github.com",
-                    path: full,
-                    fragment: `L${resolved.position.line + 1}`,
-                }),
-            );
-        }
-
-        return repos;
-    }
-
-    /**
-     * Jumps to the line on which the specified symbol resides.
-     * @param resolved the symbol to jump to
-     */
-    async #jumpToLine(resolved: ResolvedSymbol) {
-        const document = await vscode.workspace.openTextDocument(resolved.uri);
-        await vscode.window.showTextDocument(document, {
-            selection: new vscode.Range(resolved.position, resolved.position),
-        });
+        await this.symbolizer.jumpToAddress(link.address);
     }
 }
 
@@ -186,13 +108,55 @@ export function activate(context: vscode.ExtensionContext) {
         new GNUBinutilsCodeObjectReader(),
     );
 
-    const symbolizer = new Symbolizer([new PROSCodeObjectLocator()], readers);
-
-    const linkDisposable = vscode.window.registerTerminalLinkProvider(
-        new AddressLinkProvider(symbolizer),
+    const symbolizer = new Symbolizer(
+        [
+            new RecentCodeObjectLocator([
+                new SimpleFilesystemConvention("PROS", [
+                    "./bin/monolith.elf",
+                    "./bin/hot.package.elf",
+                    "./bin/cold.package.elf",
+                ]),
+                new VEXCodeFilesystemConvention(),
+                new VexideFilesystemConvention(),
+            ]),
+        ],
+        readers,
     );
 
-    context.subscriptions.push(linkDisposable);
+    context.subscriptions.push(
+        vscode.window.registerTerminalLinkProvider(
+            new AddressLinkProvider(symbolizer),
+        ),
+        vscode.commands.registerCommand(
+            "symbolizer-for-vex-v5.jump-to-address",
+            async () => {
+                let address = await vscode.window.showInputBox({
+                    title: "Jump to Address",
+                    prompt: "Enter a hexadecimal address number to reveal its location in your source code.",
+                    // This is just some random number that kind of looks like it'd work.
+                    placeHolder: "03801a24",
+                });
+
+                if (!address) {
+                    return;
+                }
+
+                if (!address.startsWith("0x")) {
+                    address = `0x${address}`;
+                }
+
+                const matches = Array.from(address.matchAll(ADDRESS_PATTERN));
+                if (matches.length === 0) {
+                    vscode.window.showErrorMessage(
+                        "The specified address must be a hexadecimal number.",
+                    );
+                    return;
+                }
+
+                await symbolizer.jumpToAddress(address);
+            },
+        ),
+    );
 }
 
 export function deactivate() {
