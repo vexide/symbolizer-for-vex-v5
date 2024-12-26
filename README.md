@@ -12,11 +12,15 @@ It requires little-to-no setup and supports PROS, VEXCode, and vexide.
 
 VEX V5 frameworks such as PROS, VEXCode, and vexide don't give line numbers or file names after a crash; instead, they give an address number. Symbolizer for VEX V5 can turn this number into something more useful by jumping directly to the location of the crash in your source code.
 
+[Learn how](https://github.com/vexide/symbolizer-for-vex-v5/wiki/Find-where-your-code-is-crashing)
+
 ![The "Jump to Address" command, which reveals the crash location in the editor](./images/jump-to-address.gif)
 
 ### Step through lengthy stack traces
 
 Symbolizer for VEX V5 makes each line of a stack trace clickable so you can easily step through each function that was running during a crash or panic.
+
+[Learn how](https://github.com/vexide/symbolizer-for-vex-v5/wiki/Step-through-a-stack-trace)
 
 ![Stepping through a PROS program's DATA ABORT EXCEPTION to view each stack frame during the crash](./images/stack-trace.gif)
 
