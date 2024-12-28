@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
-import { CodeObjectReader, ResolvedSymbol } from "./symbolization.js";
+import {
+    CodeObjectReader,
+    ResolvedLocation,
+    ResolvedSymbol,
+} from "./symbolization.js";
 import { promisify } from "node:util";
 import { execFile as execFileCb } from "node:child_process";
 import { EOL } from "node:os";
@@ -43,20 +47,31 @@ export class GNUBinutilsCodeObjectReader implements CodeObjectReader {
         );
         const { stdout } = await execFile(this.executable, args);
 
-        const [symbolName, location] = stdout.trim().split(EOL);
-        const lineNumberSplit = location.lastIndexOf(":");
-
-        const path = location.substring(0, lineNumberSplit);
-        const lineNum = Number.parseInt(
-            location.substring(lineNumberSplit + 1),
-        );
-        const position = new vscode.Position(lineNum - 1, 0);
+        const [symbolName, locationString] = stdout.trim().split(EOL);
+        const sourceLocation = this.resolveLocation(locationString);
 
         return {
-            uri: vscode.Uri.file(path),
-            position,
+            sourceLocation,
             symbolName,
             codeObject,
+        };
+    }
+
+    resolveLocation(locationString: string): ResolvedLocation | undefined {
+        const lineNumberSplit = locationString.lastIndexOf(":");
+        const path = locationString.substring(0, lineNumberSplit);
+        const lineString = locationString.substring(lineNumberSplit + 1);
+        if (path === "??") {
+            return;
+        }
+
+        const position = new vscode.Position(
+            Number.parseInt(lineString) - 1,
+            0,
+        );
+        return {
+            position,
+            uri: vscode.Uri.file(path),
         };
     }
 }
@@ -130,20 +145,27 @@ export class LLVMCodeObjectReader implements CodeObjectReader {
         if (!symbol) {
             throw new Error("No symbol data for this address");
         }
-        if (!symbol.FileName) {
+        if (!symbol.FunctionName) {
             throw new Error("The symbol does not exist");
         }
 
-        const position = new vscode.Position(
-            symbol.Line - 1,
-            symbol.Column - 1,
-        );
+        return {
+            sourceLocation: this.resolveLocation(symbol),
+            symbolName: symbol.FunctionName,
+            codeObject,
+        };
+    }
+
+    resolveLocation(
+        symbol: LLVMSymbolizerSymbol,
+    ): ResolvedLocation | undefined {
+        if (!symbol.FileName) {
+            return;
+        }
 
         return {
             uri: vscode.Uri.file(symbol.FileName),
-            position,
-            symbolName: symbol.FunctionName,
-            codeObject,
+            position: new vscode.Position(symbol.Line - 1, symbol.Column - 1),
         };
     }
 }

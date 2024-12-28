@@ -19,10 +19,7 @@ export interface CodeObjectLocator {
     findObjectUris(folder: vscode.Uri): Promise<vscode.Uri[]>;
 }
 
-/**
- * Metadata about an address such as its file and line number.
- */
-export interface ResolvedSymbol {
+export interface ResolvedLocation {
     /**
      * The URI of the file in which the symbol is located.
      */
@@ -31,6 +28,16 @@ export interface ResolvedSymbol {
      * The line number and column of the symbol.
      */
     position: vscode.Position;
+}
+
+/**
+ * Metadata about an address such as its file and line number.
+ */
+export interface ResolvedSymbol {
+    /**
+     * The location in source code of the symbol.
+     */
+    sourceLocation?: ResolvedLocation;
     /**
      * The URI of the code object from which this metadata was read.
      */
@@ -226,14 +233,22 @@ export class Symbolizer {
                 }
             }
 
-            const sourceCodePath = showFullPath
-                ? resolved.uri.path
-                : path.basename(resolved.uri.path);
+            let sourceCodePath: string | undefined = undefined;
+            if (resolved.sourceLocation) {
+                sourceCodePath = showFullPath
+                    ? resolved.sourceLocation.uri.path
+                    : path.basename(resolved.sourceLocation.uri.path);
+            }
+
             const codeObjectFileName = path.basename(resolved.codeObject.path);
 
             vscode.window
                 .showInformationMessage(
-                    `${resolved.symbolName} in ${sourceCodePath} (${codeObjectFileName})`,
+                    `${resolved.symbolName}${
+                        sourceCodePath !== undefined
+                            ? ` in ${sourceCodePath}`
+                            : ""
+                    } (${codeObjectFileName})`,
                     ...remoteRepos.keys(),
                 )
                 .then((action) => {
@@ -334,8 +349,11 @@ export class Symbolizer {
         const repos = new Map();
 
         const prosBase = "/home/vsts/work/1/s/";
-        if (resolved.uri.path.startsWith(prosBase)) {
-            const relative = resolved.uri.path.replace(prosBase, "");
+        if (resolved.sourceLocation?.uri.path.startsWith(prosBase)) {
+            const relative = resolved.sourceLocation.uri.path.replace(
+                prosBase,
+                "",
+            );
             const full = path.resolve(
                 "purduesigbots/pros/blob/develop-pros-4/",
                 relative,
@@ -347,7 +365,7 @@ export class Symbolizer {
                     scheme: "https",
                     authority: "www.github.com",
                     path: full,
-                    fragment: `L${resolved.position.line + 1}`,
+                    fragment: `L${resolved.sourceLocation.position.line + 1}`,
                 }),
             );
         }
@@ -360,9 +378,18 @@ export class Symbolizer {
      * @param resolved the symbol to jump to
      */
     async #jumpToLine(resolved: ResolvedSymbol) {
-        const document = await vscode.workspace.openTextDocument(resolved.uri);
+        if (!resolved.sourceLocation) {
+            return;
+        }
+
+        const document = await vscode.workspace.openTextDocument(
+            resolved.sourceLocation.uri,
+        );
         await vscode.window.showTextDocument(document, {
-            selection: new vscode.Range(resolved.position, resolved.position),
+            selection: new vscode.Range(
+                resolved.sourceLocation.position,
+                resolved.sourceLocation.position,
+            ),
         });
     }
 

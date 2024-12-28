@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { Symbolizer } from "./symbolization.js";
+import { CodeObjectReader, Symbolizer } from "./symbolization.js";
 import { output } from "./logs.js";
 import {
     SimpleFilesystemConvention,
@@ -77,7 +77,7 @@ class AddressLinkProvider implements vscode.TerminalLinkProvider {
 export function activate(context: vscode.ExtensionContext) {
     output.appendLine("Extension has been activated!");
 
-    const readers = [new LLVMCodeObjectReader()];
+    const readers: CodeObjectReader[] = [new LLVMCodeObjectReader()];
 
     if (platform === "darwin") {
         // We like LLVM more than GNU Binutils (because it gives us column numbers) so it's worth the extra
