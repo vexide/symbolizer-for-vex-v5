@@ -4,7 +4,7 @@ All notable changes to the "symbolizer-for-vex-v5" extension will be documented 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.1.3]
 
 - Improved the stability of the LLVM backend when jumping to symbols with missing file paths/line numbers.
   Now, the symbol's name will always be displayed, even if there is no source code to show for it. This makes
@@ -25,7 +25,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - Initial release
 
-[Unreleased]: https://github.com/vexide/symbolizer-for-vex-v5/compare/v0.1.2...main
+[0.1.3]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/doinkythederp/symbolizer-for-vex-v5/commits/v0.1.0
