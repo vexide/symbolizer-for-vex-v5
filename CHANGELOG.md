@@ -11,6 +11,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   it easier to work with closed-source VEXcode components. This feature was already working with the GNU Binutils
   backend.
 - Symbols with missing file paths/line numbers no longer show "??" where the path would be.
+- Command display names are now prefixed with the extension name.
 
 ## [0.1.2]
 

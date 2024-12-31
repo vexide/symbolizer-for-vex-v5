@@ -18,7 +18,7 @@
         "commands": [
             {
                 "command": "symbolizer-for-vex-v5.jump-to-address",
-                "title": "Jump to Address"
+                "title": "Symbolizer for VEX V5: Jump to Address"
             }
         ]
     },
