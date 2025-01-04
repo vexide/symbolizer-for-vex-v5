@@ -4,7 +4,7 @@ All notable changes to the "symbolizer-for-vex-v5" extension will be documented 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.1.4]
 
 - Improved reliability of addr2line-based symbolization.
 
@@ -29,7 +29,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - Initial release
 
-[Unreleased]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.3...main
+[0.1.4]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/doinkythederp/symbolizer-for-vex-v5/compare/v0.1.0...v0.1.1
