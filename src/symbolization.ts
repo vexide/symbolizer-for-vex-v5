@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { output } from "./logs.js";
-import { format } from "node:util";
+import { inspect } from "node:util";
 import * as path from "node:path";
 
 /**
@@ -96,7 +96,7 @@ export class Symbolizer {
                     if (await reader.isWorking()) {
                         this.#firstWorkingReader = reader;
                         output.appendLine(
-                            `The following reader will be used: ${format(
+                            `The following reader will be used: ${inspect(
                                 reader,
                             )}`,
                         );
@@ -170,6 +170,15 @@ export class Symbolizer {
             throw new Error("Cannot find any code objects in this project");
         }
 
+        output.appendLine(
+            "The following code objects were found, in order of preference:",
+        );
+        let itemNum = 1;
+        for (const codeObject of locatedCodeObjects) {
+            output.appendLine(`    ${itemNum}. ${codeObject.fsPath}`);
+            itemNum += 1;
+        }
+
         const reader = await readerRequest;
         if (!reader) {
             const readers = this.readers
@@ -183,13 +192,30 @@ export class Symbolizer {
         const errors = [];
         let resolved: ResolvedSymbol | undefined;
         for (const codeObject of locatedCodeObjects) {
+            output.appendLine(`Resolving ${codeObject.fsPath}`);
             try {
                 resolved = await reader.resolveToSymbolInObject(
                     address,
                     codeObject,
                 );
-                break;
+                output.appendLine(`Resolved to: ${inspect(resolved)}`);
+
+                const resultIsSuboptimal =
+                    resolved.sourceLocation === undefined;
+                if (resultIsSuboptimal) {
+                    output.appendLine(
+                        "This result is sub-optimal because there is no source location, so any remaining objects will be checked as well.",
+                    );
+                } else {
+                    output.appendLine(
+                        "This result seems reasonable, stopping here.",
+                    );
+                    break;
+                }
             } catch (err) {
+                output.appendLine(
+                    "This code object could not be resolved: " + inspect(err),
+                );
                 errors.push(err);
             }
         }
@@ -200,6 +226,7 @@ export class Symbolizer {
                 "This address could not be resolved to a line",
             );
         }
+
         return resolved;
     }
 
@@ -218,8 +245,6 @@ export class Symbolizer {
                 throw new Error("There is no active workspace");
             }
             const resolved = await this.resolveToSymbol(address, folder);
-
-            output.appendLine(`Resolved to: ${format(resolved)}`);
 
             const remoteRepos = this.#getRemoteRepos(resolved);
             let showFullPath = false;
@@ -269,7 +294,7 @@ export class Symbolizer {
             const INSTALL_PROS_TOOLCHAIN =
                 "Install PROS Toolchain (recommended)";
 
-            output.appendLine(`Failed to jump to line: ${format(err)}`);
+            output.appendLine(`Failed to jump to line: ${inspect(err)}`);
             const msg = err instanceof Error ? err.message : String(err);
 
             const actions: string[] = [];

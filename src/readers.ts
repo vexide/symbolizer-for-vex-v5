@@ -48,6 +48,10 @@ export class GNUBinutilsCodeObjectReader implements CodeObjectReader {
         const { stdout } = await execFile(this.executable, args);
 
         const [symbolName, locationString] = stdout.trim().split(EOL);
+        if (symbolName === "??") {
+            throw new Error("The symbol does not exist");
+        }
+
         const sourceLocation = this.resolveLocation(locationString);
 
         return {

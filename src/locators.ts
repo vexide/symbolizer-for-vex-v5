@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { CodeObjectLocator } from "./symbolization.js";
-import { output } from "./logs.js";
+import { inspectPattern, output } from "./logs.js";
 import * as path from "node:path";
-import { format } from "node:util";
+import { inspect } from "node:util";
 
 interface TimestampedFile {
     uri: vscode.Uri;
@@ -57,7 +57,7 @@ export class VexideFilesystemConvention implements FilesystemConvention {
         );
 
         output.appendLine(
-            `Using the following pattern to search for vexide files: ${format(
+            `Using the following pattern to search for vexide files: ${inspectPattern(
                 pattern,
             )}`,
         );
@@ -95,7 +95,9 @@ export class VEXCodeFilesystemConvention implements FilesystemConvention {
         const pattern = new vscode.RelativePattern(projectDir, "build/*.elf");
 
         output.appendLine(
-            `Using pattern to search for VEXCode files: ${format(pattern)}`,
+            `Using pattern to search for VEXCode files: ${inspectPattern(
+                pattern,
+            )}`,
         );
         return await vscode.workspace.findFiles(pattern);
     }
