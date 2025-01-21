@@ -84,12 +84,12 @@ export function activate(context: vscode.ExtensionContext) {
         // effort here of checking for a Homebrew install.
         // Linux package managers don't need their own CodeObjectReader instances because they usually put
         // their tools in the $PATH of all processes, whereas Homebrew only puts it in the $PATH of shells.
-        readers.push(
-            new LLVMCodeObjectReader(
-                "Homebrew LLVM",
-                "/opt/homebrew/opt/llvm/bin/llvm-symbolizer",
-            ),
-        );
+        // readers.push(
+        //     new LLVMCodeObjectReader(
+        //         "Homebrew LLVM",
+        //         "/opt/homebrew/opt/llvm/bin/llvm-symbolizer",
+        //     ),
+        // );
     }
 
     readers.push(

@@ -246,6 +246,9 @@ export class Symbolizer {
             }
             const resolved = await this.resolveToSymbol(address, folder);
 
+            const ENABLE_DEBUG_INFO = "Enable all debug metadata (recommended)";
+            const extraActions: string[] = [];
+
             const remoteRepos = this.#getRemoteRepos(resolved);
             let showFullPath = false;
 
@@ -267,13 +270,25 @@ export class Symbolizer {
 
             const codeObjectFileName = path.basename(resolved.codeObject.path);
 
+            // If VEXcode's debug info is disabled, sometimes you can still get symbol names but not source locations.
+            // If this is the case, offer to enable debug info.
+            const shouldEnableDebugInfo =
+                !resolved.sourceLocation &&
+                (await this.canAutoFixVEXCodeDebugInfo(folder.uri));
+            if (shouldEnableDebugInfo) {
+                extraActions.push(ENABLE_DEBUG_INFO);
+            }
+
+            let msg = resolved.symbolName;
+            if (sourceCodePath !== undefined) {
+                msg += ` in ${sourceCodePath}`;
+            }
+            msg += ` (${codeObjectFileName})`;
+
             vscode.window
                 .showInformationMessage(
-                    `${resolved.symbolName}${
-                        sourceCodePath !== undefined
-                            ? ` in ${sourceCodePath}`
-                            : ""
-                    } (${codeObjectFileName})`,
+                    msg,
+                    ...extraActions,
                     ...remoteRepos.keys(),
                 )
                 .then((action) => {
@@ -281,13 +296,20 @@ export class Symbolizer {
                         return;
                     }
 
-                    const uri = remoteRepos.get(action);
-                    if (uri) {
-                        vscode.env.openExternal(uri);
-                    }
+                    tryAsyncOrLogError(async () => {
+                        if (action === ENABLE_DEBUG_INFO) {
+                            await this.autoFixVEXCodeDebugInfo(folder.uri);
+                            return;
+                        }
+
+                        const uri = remoteRepos.get(action);
+                        if (uri) {
+                            await vscode.env.openExternal(uri);
+                        }
+                    });
                 });
         } catch (err) {
-            const RUN_AUTOFIX = "Enable VEXCode debug info";
+            const RUN_AUTOFIX = "Enable debug metadata (auto-fix)";
             const DOWNLOAD_LLVM = "Download LLVM";
             const SHOW_PROS_EXTENSION =
                 "Install PROS VS Code extension (recommended)";
@@ -510,11 +532,25 @@ export class Symbolizer {
         } catch {}
 
         vscode.window.showInformationMessage(
-            `Enabled debug info! ${
+            `Enabled debug metadata! ${
                 didClean
                     ? "Reupload your project"
                     : "Clean the project and reupload it"
             } to finish.`,
         );
+    }
+}
+
+async function tryAsyncOrLogError<T>(
+    fn: () => Thenable<T>,
+): Promise<T | undefined> {
+    try {
+        return await fn();
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        output.appendLine(`Error: ${msg}`);
+        vscode.window.showErrorMessage(`Error: ${msg}`);
+
+        return undefined;
     }
 }
