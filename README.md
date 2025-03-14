@@ -16,11 +16,11 @@ VEX V5 frameworks such as PROS, VEXCode, and vexide don't give line numbers or f
 
 ![The "Jump to Address" command, which reveals the crash location in the editor](./images/jump-to-address.gif)
 
-### Step through lengthy stack traces
+### Review confusing debug logs
 
-Symbolizer for VEX V5 makes each line of a stack trace clickable so you can easily step through each function that was running during a crash or panic.
+Symbolizer for VEX V5 makes PROS and vexide debug logs clickable so you can easily view each function that was running during a crash or panic.
 
-[Learn how](https://github.com/vexide/symbolizer-for-vex-v5/wiki/Step-through-a-stack-trace)
+[Learn how](https://github.com/vexide/symbolizer-for-vex-v5/wiki/Review-a-debug-log-after-a-crash)
 
 ![Stepping through a PROS program's DATA ABORT EXCEPTION to view each stack frame during the crash](./images/stack-trace.gif)
 
