@@ -425,7 +425,7 @@ export class Symbolizer {
     }
 
     /**
-     * Jumps to the line on which the specified symbol resides.
+     * Creates a text selection on the line on which the specified symbol resides.
      * @param resolved the symbol to jump to
      */
     async #jumpToLine(resolved: ResolvedSymbol) {
@@ -436,10 +436,22 @@ export class Symbolizer {
         const document = await vscode.workspace.openTextDocument(
             resolved.sourceLocation.uri,
         );
+
+        let selectionEnd = document.validatePosition(
+            new vscode.Position(resolved.sourceLocation.position.line + 1, 0),
+        );
+
+        // The end of the selection should be on the end of the same line.
+        if (selectionEnd.line !== resolved.sourceLocation.position.line) {
+            selectionEnd = document.positionAt(
+                document.offsetAt(selectionEnd) - 1,
+            );
+        }
+
         await vscode.window.showTextDocument(document, {
             selection: new vscode.Range(
                 resolved.sourceLocation.position,
-                resolved.sourceLocation.position,
+                selectionEnd,
             ),
         });
     }
