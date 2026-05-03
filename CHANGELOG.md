@@ -4,6 +4,10 @@ All notable changes to the "symbolizer-for-vex-v5" extension will be documented 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.1.5]
+
+- The extension now only activates when you use its commands or open a terminal.
+
 ## [0.1.4]
 
 - Improved reliability of addr2line-based symbolization.

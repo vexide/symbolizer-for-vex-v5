@@ -450,8 +450,8 @@ export class Symbolizer {
     readonly #vexCodeAutoFixDebugInfoInsertionPoint = "include vex/mkenv.mk";
 
     /**
-     * Checks if debug info can be automatically enabled in the specified VEXCode project.
-     * @param projectDir the VEXCode project to check
+     * Checks if debug info can be automatically enabled in the specified VEXcode project.
+     * @param projectDir the VEXcode project to check
      * @param makefileContents the contents of the project's makefile, if it has already been read
      * @returns `true` if a fix is available, `false` otherwise
      */
@@ -464,7 +464,7 @@ export class Symbolizer {
                 makefileContents ??
                 (await this.#readVEXCodeMakefile(projectDir));
 
-            // Needs to be a VEXCode makefile to apply auto-fix
+            // Needs to be a VEXcode makefile to apply auto-fix
             if (!makefile.startsWith("# VEXcode makefile")) {
                 return false;
             }
@@ -489,8 +489,8 @@ export class Symbolizer {
     }
 
     /**
-     * Automatically enables debug info in a VEXCode project so that symbols can be resolved.
-     * @param projectDir the VEXCode project to fix
+     * Automatically enables debug info in a VEXcode project so that symbols can be resolved.
+     * @param projectDir the VEXcode project to fix
      */
     async autoFixVEXCodeDebugInfo(projectDir: vscode.Uri) {
         output.appendLine("Attempting to fix Makefile!");

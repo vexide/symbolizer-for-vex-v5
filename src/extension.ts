@@ -93,8 +93,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     readers.push(
-        // "And this is where I'd put my VEXCode arm-none-eabi-addr2line...if I had one!"
-        // VEXCode doesn't ship with a symbolizer.
+        // "And this is where I'd put my VEXcode arm-none-eabi-addr2line...if I had one!"
+        // VEXcode doesn't ship with a symbolizer.
         // The Rustup `llvm-tools` component also doesn't ship with a symbolizer.
         new PROSToolchainCodeObjectReader(
             vscode.Uri.joinPath(context.globalStorageUri, ".."),

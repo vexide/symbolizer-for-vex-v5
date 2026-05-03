@@ -1,16 +1,25 @@
 # Symbolizer for VEX V5
 
-A Visual Studio Code extension for VEX V5 robot programmers which reveals the location of a crash, given its address.
+A VS Code extension which helps you understand crash reports and find the line of code where your VEX V5 robot program is crashing.
 
-It requires little-to-no setup and supports PROS, VEXCode, and vexide.
+All VEX V5 programming frameworks are supported:
+
+| Feature | vexide | PROS | VEXcode |
+|--------:|:------:|:----:|:-------:|
+| Find the line of code responsible for a crash | ✅ | ✅ | ✅ |
+| Parse stack traces in crash logs | ✅ | ✅ | N/A |
+| Zero-configuration setup and usage | ⚠️<sup>\[1\]</sup> | ✅ | ⛔️<sup>\[1\]</sup><sup>\[2\]</sup>
+
+* \[1\]: Users need to install LLVM, addr2line, or PROS separately.
+* \[2\]: Project configuration changes required (auto-fix available).
 
 ## Features
 
 ### Find where your code is crashing
 
-![A VEXCode program displaying a memory permission error](./images/crash.png)
+![A VEXcode program displaying a memory permission error](./images/crash.png)
 
-VEX V5 frameworks such as PROS, VEXCode, and vexide don't give line numbers or file names after a crash; instead, they give an address number. Symbolizer for VEX V5 can turn this number into something more useful by jumping directly to the location of the crash in your source code.
+VEX V5 frameworks such as PROS, VEXcode, and vexide don't give line numbers or file names after a crash; instead, they give an address number. Symbolizer for VEX V5 can turn this number into something more useful by jumping directly to the location of the crash in your source code.
 
 [Learn how](https://github.com/vexide/symbolizer-for-vex-v5/wiki/Find-where-your-code-is-crashing)
 
@@ -38,7 +47,7 @@ This extension requires a symbolizer tool in order to function. Installing LLVM 
 
 The PROS Toolchain includes addr2line, so PROS users do not need to take any further steps.
 
-VEXCode and vexide users will be prompted to install the PROS VS Code extension or to install LLVM.
+VEXcode and vexide users will be prompted to install the PROS VS Code extension or to install LLVM.
 
 <!-- ## Extension Settings
 
