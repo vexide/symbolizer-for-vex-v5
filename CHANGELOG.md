@@ -7,6 +7,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [0.1.5]
 
 - The extension now only activates when you use its commands or open a terminal.
+- Fixed the vexide ELF file locator for projects with hyphenated names.
+- Fixed an off-by-one error when using the LLVM backend
+- Added support for Homebrew LLVM
 
 ## [0.1.4]
 

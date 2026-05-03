@@ -103,6 +103,10 @@ export class Symbolizer {
                         break;
                     }
                 } catch {}
+
+                output.appendLine(
+                    `The object reader ${reader.name} is not working.`,
+                );
             }
         } else {
             if (!(await this.#firstWorkingReader.isWorking())) {

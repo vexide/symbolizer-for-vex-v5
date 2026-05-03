@@ -84,16 +84,16 @@ export function activate(context: vscode.ExtensionContext) {
         // effort here of checking for a Homebrew install.
         // Linux package managers don't need their own CodeObjectReader instances because they usually put
         // their tools in the $PATH of all processes, whereas Homebrew only puts it in the $PATH of shells.
-        // readers.push(
-        //     new LLVMCodeObjectReader(
-        //         "Homebrew LLVM",
-        //         "/opt/homebrew/opt/llvm/bin/llvm-symbolizer",
-        //     ),
-        // );
+        readers.push(
+            new LLVMCodeObjectReader(
+                "Homebrew LLVM",
+                "/opt/homebrew/opt/llvm/bin/llvm-symbolizer",
+            ),
+        );
     }
 
     readers.push(
-        // "And this is where I'd put my VEXcode arm-none-eabi-addr2line...if I had one!"
+        // "And this is where I'd put my VEXcode symbolizer...if I had one!"
         // VEXcode doesn't ship with a symbolizer.
         // The Rustup `llvm-tools` component also doesn't ship with a symbolizer.
         new PROSToolchainCodeObjectReader(
@@ -103,7 +103,9 @@ export function activate(context: vscode.ExtensionContext) {
             "ARM Embedded Toolchain",
             "arm-none-eabi-addr2line",
         ),
-        new GNUBinutilsCodeObjectReader(),
+        // GNU Binutils is more limited than LLVM and will error if you try to use it with
+        // cross-compiled binaries, so we don't include bare addr2line.
+        // new GNUBinutilsCodeObjectReader(),
     );
 
     const symbolizer = new Symbolizer(
@@ -137,7 +139,7 @@ export function activate(context: vscode.ExtensionContext) {
                         title: "Jump to Address",
                         prompt: "Enter a hexadecimal address number to reveal its location in your source code.",
                         // This is just some random number that kind of looks like it'd work.
-                        placeHolder: "03801a24",
+                        placeHolder: "03801a24 (example)",
                     });
                 }
 

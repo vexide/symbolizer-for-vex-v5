@@ -169,7 +169,7 @@ export class LLVMCodeObjectReader implements CodeObjectReader {
 
         return {
             uri: vscode.Uri.file(symbol.FileName),
-            position: new vscode.Position(symbol.Line - 1, symbol.Column - 1),
+            position: new vscode.Position(symbol.Line, symbol.Column),
         };
     }
 }
