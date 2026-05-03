@@ -10,6 +10,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Fixed the vexide ELF file locator for projects with hyphenated names.
 - Fixed an off-by-one error when using the LLVM backend
 - Added support for Homebrew LLVM
+- When jumping to a symbol, the extension now selects the line of code instead of just moving the
+  cursor there.
 
 ## [0.1.4]
 
