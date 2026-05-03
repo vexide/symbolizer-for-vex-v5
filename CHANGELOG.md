@@ -12,6 +12,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Added support for Homebrew LLVM
 - When jumping to a symbol, the extension now selects the line of code instead of just moving the
   cursor there.
+- Added support for viewing source code from the LemLib library.
 
 ## [0.1.4]
 
