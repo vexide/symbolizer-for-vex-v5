@@ -399,26 +399,46 @@ export class Symbolizer {
     #getRemoteRepos(resolved: ResolvedSymbol): Map<string, vscode.Uri> {
         const repos = new Map();
 
-        const prosBase = "/home/vsts/work/1/s/";
-        if (resolved.sourceLocation?.uri.path.startsWith(prosBase)) {
-            const relative = resolved.sourceLocation.uri.path.replace(
-                prosBase,
-                "",
-            );
-            const full = path.resolve(
-                "purduesigbots/pros/blob/develop-pros-4/",
-                relative,
-            );
+        const knownProjects = new Map([
+            // PROS
+            [
+                "/home/vsts/work/1/s/",
+                {
+                    name: "PROS",
+                    github: "purduesigbots/pros/blob/develop-pros-4/",
+                },
+            ],
+            // LemLib
+            [
+                "/workspaces/LemLib/",
+                {
+                    name: "LemLib",
+                    github: "LemLib/LemLib/blob/stable/",
+                },
+            ],
+        ]);
 
-            repos.set(
-                "Open purduesigbots/pros",
-                vscode.Uri.from({
-                    scheme: "https",
-                    authority: "www.github.com",
-                    path: full,
-                    fragment: `L${resolved.sourceLocation.position.line + 1}`,
-                }),
-            );
+        for (const [base, details] of knownProjects) {
+            if (resolved.sourceLocation?.uri.path.startsWith(base)) {
+                const relative = resolved.sourceLocation.uri.path.replace(
+                    base,
+                    "",
+                );
+                const full = path.resolve(
+                    details.github,
+                    relative,
+                );
+
+                repos.set(
+                    `Show ${details.name} Source Code`,
+                    vscode.Uri.from({
+                        scheme: "https",
+                        authority: "www.github.com",
+                        path: full,
+                        fragment: `L${resolved.sourceLocation.position.line + 1}`,
+                    }),
+                );
+            }
         }
 
         return repos;
